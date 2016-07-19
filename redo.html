@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Modern Analysis</title>
+    </head>
+    <body>
+        <h1><span id="linesl"></span> <span id="linesr"></span></h1>
+        <canvas id="canvas" width="1080" height="1080"></canvas>
+        <script>
+            const starting_speed = 100, starting_scale = 100;
+            var canvas = document.getElementById("canvas");
+            var ctx = canvas.getContext("2d");
+            var last_refresh = performance.now();
+            var dt = performance.now() - last_refresh;
+            var linesl = document.getElementById("linesl"), linesr = document.getElementById("linesr");
+            var lines = [];
+            var ready_lines = [];
+            function Line(x, y, xs, ys, s, g) {
+                return {sx: x, sy: y, ex: x, ey: y, xs: xs, ys: ys, s: s < 2 ? 10*s : s, g: g, l: Math.random()+0.5};
+            }
+            function respawn(line) {
+                if (line.g > 25) return;
+                let new_data = [line.ex, line.ey];
+                lines.push(Line(line.ex, line.ey, (Math.round(Math.random()) == 0 ? 1 : -1)*line.ys*(Math.random()/2+0.5), (Math.round(Math.random()) == 0 ? 1 : -1)*line.xs*(Math.random()/2+0.5), line.s*(Math.random()+0.1), line.g+1));
+            }
+            lines.push(Line(canvas.width/2, canvas.height/2,  starting_speed,  0, starting_scale, 1));
+            lines.push(Line(canvas.width/2, canvas.height/2, -starting_speed,  0, starting_scale, 1));
+            lines.push(Line(canvas.width/2, canvas.height/2,  0,  starting_speed, starting_scale, 1));
+            lines.push(Line(canvas.width/2, canvas.height/2,  0, -starting_speed, starting_scale, 1));
+            function update() {
+                let new_refresh = performance.now();
+                dt = (new_refresh - last_refresh) / 1000;
+                last_refresh = new_refresh;
+                for (let line_index in lines) {
+                    let line = lines[line_index];
+                    if (line.s < 3 || Math.max(Math.abs(line.xs), Math.abs(line.ys)) < 1) {
+                        lines.splice(line_index, 1);
+                        continue;
+                    }
+                    if (line.l > 0) {
+                        line.ex += line.xs * Math.min(line.l, dt);
+                        line.ey += line.ys * Math.min(line.l, dt);
+                        line.l -= dt;
+                        if (line.l <= 0 && !line.done) {
+                            line.done = true;
+                            respawn(line);
+                            respawn(line);
+                            ready_lines.push(line);
+                            lines.splice(line_index, 1);
+                        }
+                    }
+                }
+                if (lines.length > 0) {
+                    setTimeout(update, lines[0].g*100);
+                } else {
+                    for (let line of ready_lines) {
+                        ctx.lineWidth = line.scale;
+                        ctx.beginPath();
+                        ctx.moveTo(line.sx, line.sy);
+                        ctx.lineTo(line.ex, line.ey);
+                        ctx.stroke()
+                    }
+                }
+                linesl.innerHTML = lines.length;
+                linesr.innerHTML = ready_lines.length;
+            }
+            update();
+        </script>
+    </body>
+</html>
